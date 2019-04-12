@@ -17,7 +17,7 @@ folder_name = "./data_set/cifar_10"
  
  
 
-<h2>imagenet dataset 예정</h2>
+<h3>imagenet dataset 예정</h3>
  
  
 <h2>2. DenseNet</h2>
@@ -25,6 +25,6 @@ folder_name = "./data_set/cifar_10"
  : 예정
 
 
-<h5>3. SENet</h5>
+<h2>3. SENet</h2>
 
 : 예정
