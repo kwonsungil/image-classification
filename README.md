@@ -1,6 +1,6 @@
 # image-classification
 
-<h1>1. ResNet</h1>
+<h2>1. ResNet</h2>
  
 <h3>cifal dataset</h3>
 <div>
@@ -17,10 +17,10 @@ folder_name = "./data_set/cifar_10"
  
  
 
-<h3>imagenet dataset 예정</h3>
+<h2>imagenet dataset 예정</h2>
  
  
-<h5>2. DenseNet</h5>
+<h2>2. DenseNet</h2>
 
  : 예정
 
