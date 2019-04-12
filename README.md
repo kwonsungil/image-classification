@@ -1,6 +1,6 @@
 # image-classification
 
-<h5>1. ResNet</h5>
+<h1>1. ResNet</h1>
  
 <h3>cifal dataset</h3>
 <div>
