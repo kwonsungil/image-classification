@@ -23,6 +23,7 @@ class ResNet(object):
         self.epsilon = 1e-3
         self.decay = 0.99
         self.is_train = is_train
+        self.weight_decay = 0.00004
 
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -70,18 +71,33 @@ class ResNet(object):
                 print('restore from : ', filename)
                 self.saver.restore(self.sess, filename)
 
+    def get_variable_wd(self, name, shape, trainable=True):
+        vars= tf.get_variable(name, shape=shape,
+                            initializer=tf.truncated_normal_initializer(),
+                            # regularizer=tf.contrib.layers.l2_regularizer(self.weight_decay),
+                            trainable=trainable)
+        weight_decay = tf.nn.l2_loss(vars) * self.weight_decay
+        tf.add_to_collection('losses', weight_decay)
+        return vars
+
     def conv_layer(self, name, inputs, filters, size, stride=1, padding='SAME', activate=None):
         with tf.variable_scope(name):
-            weight = tf.get_variable('conv_weight', shape=[size, size, int(inputs.shape[3]), filters],
-                                     initializer=tf.truncated_normal_initializer(),
-                                     trainable=True)
+            # weight = tf.get_variable('conv_weight', shape=[size, size, int(inputs.shape[3]), filters],
+            #                          initializer=tf.truncated_normal_initializer(),
+            #                          trainable=True)
             # bias = tf.get_variable('conv_bias', shape=filters,
             #                        initializer=tf.truncated_normal_initializer(),
             #                        trainable=True)
+            weight = self.get_variable_wd('conv_weight', shape=[size, size, int(inputs.shape[3]), filters])
+            # bias = self.get_variable_wd('conv_bias', shape=[filters])
+            print(inputs)
+            print(weight)
             conv = tf.nn.conv2d(inputs, weight, strides=[1, stride, stride, 1], padding=padding,
                                 name='conv')
-            # conv = tf.add(conv, bias, name='conv_biased')
+            # conv_biased = tf.add(conv, bias, name='conv_biased')
+            # return conv_biased if activate is None else tf.nn.relu(conv_biased)
             return conv if activate is None else tf.nn.relu(conv)
+
 
     def batch_norm_conv(self, name, inputs, activate=None):
         # https://git.alphagriffin.com/O.P.P/FiryZeplin-deep-learning/src/ee5b04a3ff360d8276d881e41265d7d45f47ccc9/batch-norm/Batch_Normalization_Solutions.ipynb
@@ -156,14 +172,17 @@ class ResNet(object):
                 name="avg_pool")
 
     def fc_layer(self, name, inputs, outputs, activate=None, trainable=True):
-        # weight = tf.Variable(tf.truncated_normal([dim, hiddens], stddev=0.1), trainable=trainable)
         with tf.variable_scope(name):
-            weight = tf.get_variable('fc_weight', shape=[int(inputs.shape[1]), outputs],
-                                     initializer=tf.truncated_normal_initializer(),
-                                     trainable=trainable)
-            bias = tf.get_variable('fc_bias', shape=outputs,
-                                   initializer=tf.truncated_normal_initializer(),
-                                   trainable=trainable)
+            # weight = tf.get_variable('fc_weight', shape=[int(inputs.shape[1]), outputs],
+            #                          initializer=tf.truncated_normal_initializer(),
+            #                          trainable=trainable)
+            # bias = tf.get_variable('fc_bias', shape=outputs,
+            #                        initializer=tf.truncated_normal_initializer(),
+            #                        trainable=trainable)
+
+            weight = self.get_variable_wd('fc_weight', shape=[int(inputs.shape[1]), outputs])
+            bias = self.get_variable_wd('fc_bias', shape=outputs)
+
             return tf.add(tf.matmul(inputs, weight), bias) if activate is None else tf.nn.relu(
                 tf.add(tf.matmul(inputs, weight), bias))
 
@@ -209,13 +228,15 @@ class ResNet(object):
             return model
 
     def compute_loss(self):
-        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.label))
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.label))
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.label))
+        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.label))
+        tf.add_to_collection('losses', loss)
         accuracy = tf.reduce_mean(
             tf.cast(tf.equal(tf.argmax(self.logits, axis=1), tf.argmax(self.label, axis=1)), tf.float32),
             name='accuracy')
 
-        return loss, accuracy
+        return tf.add_n(tf.get_collection('losses'), name='total_loss'), accuracy
+
 
     def train(self, batch_x, batch_y, save=False):
         # print(self.graph)
